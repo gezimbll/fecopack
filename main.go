@@ -145,10 +145,11 @@ func consumeMessage(ctx context.Context, ch *amqp.Channel, queueName string) {
 			log.Println("File created:", file)
 		case <-ctx.Done():
 		case msg, ok := <-msgs:
+			msg.Ack(true)
 			if !ok {
 				return
 			}
-			processMessage(errChan, fileChan, msg, json)
+			go processMessage(errChan, fileChan, msg, json)
 		}
 	}
 }
@@ -174,21 +175,25 @@ func processMessage(errCh chan<- error, filech chan string, msg amqp.Delivery, j
 	}
 
 	if coprBuild.Version != "" {
-		go generateFiles(errCh, filech, coprBuild)
+		file, err := generateFiles(coprBuild)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		filech <- file
 	}
+
 }
-func generateFiles(errc chan<- error, filech chan<- string, c CoprBuild) {
+func generateFiles(c CoprBuild) (file string, err error) {
 	urlPath, err := url.JoinPath(DownloadUrl, c.Owner, c.Copr, c.Chroot, fmt.Sprintf("0%v", c.Build)+CGRSuffix, CGRPrefix+strings.Join([]string{c.Version, ArchBuild, RpmSuffix}, "."))
 	if err != nil {
-		errc <- err
 		return
 	}
-	file, err := downloadFile(strings.Join([]string{c.Version, ArchBuild, RpmSuffix}, "."), c.Copr, c.Chroot, urlPath)
+	file, err = downloadFile(strings.Join([]string{c.Version, ArchBuild, RpmSuffix}, "."), c.Copr, c.Chroot, urlPath)
 	if err != nil {
-		errc <- err
 		return
 	}
-	filech <- file
+	return
 }
 
 func downloadFile(fileName, projectName, chroot, url string) (filePath string, err error) {
