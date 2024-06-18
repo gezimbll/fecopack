@@ -173,6 +173,7 @@ func processMessage(errCh chan<- error, filech chan string, msg amqp.Delivery, j
 		errCh <- err
 		return
 	}
+	log.Printf("received build %+v", coprBuild)
 
 	if coprBuild.Version != "" {
 		file, err := generateFiles(coprBuild)
