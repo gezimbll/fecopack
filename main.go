@@ -145,11 +145,11 @@ func consumeMessage(ctx context.Context, ch *amqp.Channel, queueName string) {
 			log.Println("File created:", file)
 		case <-ctx.Done():
 		case msg, ok := <-msgs:
-			msg.Ack(true)
 			if !ok {
 				return
 			}
 			go processMessage(errChan, fileChan, msg, json)
+			msg.Ack(true)
 		}
 	}
 }
