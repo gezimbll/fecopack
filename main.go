@@ -26,8 +26,9 @@ const (
 	FedoraBroker = "amqps://fedora:@rabbitmq.fedoraproject.org/%2Fpublic_pubsub"
 	Exchange     = "amq.topic"
 	RoutingKey   = "org.fedoraproject.prod.copr.build.end"
-	Owner        = "cgrates"
 
+	Owner        = "cgrates"
+	MasterBranch = "master"
 	//cacert and key paths
 	CaCert = "/etc/fedora-messaging/cacert.pem"
 	Cert   = "/etc/fedora-messaging/fedora-cert.pem"
@@ -208,7 +209,9 @@ func downloadFile(fileName, projectName, chroot, url string) (filePath string, e
 	}
 	log.Printf("Making a Request on %v\n", url)
 	defer resp.Body.Close()
-
+	if projectName == MasterBranch {
+		projectName = "nightly"
+	}
 	dirPath := filepath.Join(PackageDir, projectName, chroot)
 	if _, err = os.Stat(dirPath); os.IsNotExist(err) {
 		if err = os.MkdirAll(dirPath, 0775); err != nil {
