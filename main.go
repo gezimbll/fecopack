@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -134,7 +135,6 @@ func consumeMessage(ctx context.Context, ch *amqp.Channel, queueName string) {
 		log.Println("Error consuming messages:", err)
 		return
 	}
-	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	for {
 		select {
 		case <-ctx.Done():
@@ -149,16 +149,15 @@ func consumeMessage(ctx context.Context, ch *amqp.Channel, queueName string) {
 			if !ok {
 				return
 			}
-			go processMessage(errChan, fileChan, msg, json)
+			go processMessage(errChan, fileChan, msg)
 			msg.Ack(true)
 		}
 	}
 }
 
-func processMessage(errCh chan<- error, filech chan string, msg amqp.Delivery, json jsoniter.API) {
-	defer msg.Ack(false)
+func processMessage(errCh chan<- error, filech chan string, msg amqp.Delivery) {
 	var coprBuild CoprBuild
-	iter := jsoniter.ParseBytes(json, msg.Body)
+	iter := jsoniter.ParseBytes(jsoniter.ConfigCompatibleWithStandardLibrary, msg.Body)
 
 	for field := iter.ReadObject(); field != ""; field = iter.ReadObject() {
 		if field == PkgOwner {
